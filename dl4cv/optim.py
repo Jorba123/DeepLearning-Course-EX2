@@ -116,7 +116,9 @@ def adam(x, dx, config=None):
     eps = config['epsilon']
 
     # TODO: implement the update equations here
-    pass
+    m = beta1 * m + (1 - beta1) * dx
+    v = beta2 * v + (1 - beta2) * (dx ** 2)
+    next_x = x - learning_rate * m / (np.sqrt(v) + eps)
 
     config['t'] = t + 1
     config['m'] = m

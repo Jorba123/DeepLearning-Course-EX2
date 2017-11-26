@@ -387,19 +387,7 @@ class FullyConnectedNet(object):
 # for k, v in data.items():
 #     print('%s: ' % k, v.shape)
 #
-# N, D, H1, H2, C = 2, 15, 800, 30, 10
-# X = np.random.randn(N, D)
-# y = np.random.randint(C, size=(N,))
-#
-# for reg in [0, 3.14]:
-#     print('Running check with reg = ', reg)
-#     model = FullyConnectedNet([H1, H2], input_dim=D, num_classes=C,
-#                               reg=reg, weight_scale=5e-2, dtype=np.float64)
-#
-#     loss, grads = model.loss(X, y)
-#     print('Initial loss: ', loss)
-#
-# num_train = 50
+# num_train = 4000
 # small_data = {
 #     'X_train': data['X_train'][:num_train],
 #     'y_train': data['y_train'][:num_train],
@@ -407,15 +395,18 @@ class FullyConnectedNet(object):
 #     'y_val': data['y_val'],
 # }
 #
-# weight_scale = 1
-# learning_rate = 0.0001
-# model = FullyConnectedNet([100, 100],
-#                           weight_scale=weight_scale, dtype=np.float64)
+# learning_rates = {'adam': 1e-3}
+# update_rule = 'adam'
+# print('running with ', update_rule)
+# model = FullyConnectedNet([100, 100, 100, 100, 100], weight_scale=5e-2)
+# solvers = {}
 # solver = Solver(model, small_data,
-#                 print_every=10, num_epochs=20, batch_size=25,
-#                 update_rule='sgd',
+#                 num_epochs=5, batch_size=100,
+#                 update_rule=update_rule,
 #                 optim_config={
-#                     'learning_rate': learning_rate,
-#                 }
-#                 )
+#                     'learning_rate': learning_rates[update_rule]
+#                 },
+#                 verbose=True)
+# solvers[update_rule] = solver
 # solver.train()
+# print()

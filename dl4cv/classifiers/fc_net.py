@@ -193,7 +193,34 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        pass
+
+        input_size = input_dim
+        print('Num Layers: ', self.num_layers)
+
+        for i in range(self.num_layers - 1):
+            hidden_dim_size = hidden_dims[i]
+
+            print('\tLayer {0}: {1} - {2}'.format(i+1, input_size, hidden_dim_size))
+
+            self.params['W' + str(i + 1)] = np.random.normal(scale=weight_scale, size=(input_size, hidden_dim_size))
+            self.params['b' + str(i + 1)] = np.zeros(hidden_dim_size)
+
+            # "new" input size for the next layer
+            input_size = hidden_dim_size
+
+            if use_batchnorm:
+                print('\tLayer {0}: Batch Norm\n'.format(i+1))
+                self.params['gamma' + str(i + 1)] = 1.0
+                self.params['beta' + str(i + 1)] = 0.0
+
+        # Initialize last layer
+        print('\tLayer {0}: {1} - {2}'.format(self.num_layers, input_size, num_classes))
+        self.params['W' + str(self.num_layers)] = np.random.normal(scale=weight_scale, size=(input_size, num_classes))
+        self.params['b' + str(self.num_layers)] = np.zeros(num_classes)
+
+        print('\n\n----------------------------')
+
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -250,7 +277,39 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-        pass
+
+        caches = []
+        l_out = X
+        reg_sum = 0.0
+
+        for i in range(self.num_layers - 1):
+            cache = {}
+            W, b = self.params['W' + str(i + 1)], self.params['b' + str(i + 1)]
+
+            # reg sum
+            reg_sum += np.sum(W ** 2)
+
+            l_out, cache['affine'] = affine_forward(l_out, W, b)
+
+            # do batch normalization
+            if self.use_batchnorm:
+                gamma, beta = self.params['gamme' + str(i + 1)], self.params['beta' + str(i + 1)]
+                l_out, cache['batchNorm'] = batchnorm_forward(l_out, gamma, beta, self.bn_params[i])
+
+            # relu layer
+            l_out, cache['relu'] = relu_forward(l_out)
+
+            # if dropout
+            if self.use_dropout:
+                l_out, cache['dropout'] = dropout_forward(l_out, self.dropout_param)
+
+            caches.append(cache)
+
+        # add last layer
+        W, b = self.params['W' + str(self.num_layers)], self.params['b' + str(self.num_layers)]
+        scores, l_cache = affine_forward(l_out, W, b)
+
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -273,9 +332,90 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        pass
+
+        loss, dsm = softmax_loss(scores, y)
+
+        # do backward pass for output layer outside of loop
+        dx, dW, db = affine_backward(dsm, l_cache)
+        grads['W' + str(self.num_layers)] = dW
+        grads['b' + str(self.num_layers)] = db
+
+        for i in range(self.num_layers - 2, -1, -1):
+            cache = caches[i]
+
+            # if dropout
+            if self.use_dropout:
+                dx = dropout_backward(dx, cache['dropout'])
+
+            # relu
+            dx = relu_backward(dx, cache['relu'])
+
+            # do batch normalization
+            if self.use_batchnorm:
+                dx, grads['gamma' + str(i + 1)], grads['beta' + str(i + 1)] = batchnorm_backward(dx, cache['batchNorm'])
+
+            # affine
+            dx, dW, db = affine_backward(dx, cache['affine'])
+
+            # L1
+            W = self.params['W' + str(i + 1)]
+            dW += self.reg * W
+
+            grads['W' + str(i + 1)] = dW
+            grads['b' + str(i + 1)] = db
+
+        # add regularization for loss
+        loss += 0.5 * self.reg * reg_sum
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
 
         return loss, grads
+
+
+# from dl4cv.data_utils import get_CIFAR10_data
+#
+# from dl4cv.gradient_check import eval_numerical_gradient, eval_numerical_gradient_array
+# from dl4cv.solver import Solver
+# def rel_error(x, y):
+#     """ returns relative error """
+#     return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
+#
+#
+# data = get_CIFAR10_data(cifar10_dir='C:/Users/felix/OneDrive/Studium/Studium/4. Semester/DL4CV/Exercises/02/dl4cv/exercise_2/datasets/')
+# for k, v in data.items():
+#     print('%s: ' % k, v.shape)
+#
+# N, D, H1, H2, C = 2, 15, 800, 30, 10
+# X = np.random.randn(N, D)
+# y = np.random.randint(C, size=(N,))
+#
+# for reg in [0, 3.14]:
+#     print('Running check with reg = ', reg)
+#     model = FullyConnectedNet([H1, H2], input_dim=D, num_classes=C,
+#                               reg=reg, weight_scale=5e-2, dtype=np.float64)
+#
+#     loss, grads = model.loss(X, y)
+#     print('Initial loss: ', loss)
+#
+# num_train = 50
+# small_data = {
+#     'X_train': data['X_train'][:num_train],
+#     'y_train': data['y_train'][:num_train],
+#     'X_val': data['X_val'],
+#     'y_val': data['y_val'],
+# }
+#
+# weight_scale = 1
+# learning_rate = 0.0001
+# model = FullyConnectedNet([100, 100],
+#                           weight_scale=weight_scale, dtype=np.float64)
+# solver = Solver(model, small_data,
+#                 print_every=10, num_epochs=20, batch_size=25,
+#                 update_rule='sgd',
+#                 optim_config={
+#                     'learning_rate': learning_rate,
+#                 }
+#                 )
+# solver.train()

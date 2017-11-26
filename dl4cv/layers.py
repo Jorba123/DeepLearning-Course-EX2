@@ -24,8 +24,9 @@ def affine_forward(x, w, b):
     # TODO: Implement the affine forward pass. Store the result in out. You     #
     # will need to reshape the input into rows.                                 #
     #############################################################################
-    x = np.reshape(x, (x.shape[0], -1))
-    out = np.dot(x, w) + b
+    x_row = np.reshape(x, (x.shape[0], -1))
+    out = np.dot(x_row, w) + b
+
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -53,8 +54,14 @@ def affine_backward(dout, cache):
     #############################################################################
     # TODO: Implement the affine backward pass.                                 #
     #############################################################################
-    pass
-    #############################################################################
+    x_row = np.reshape(x, (x.shape[0], -1))
+
+    dw = np.dot(x_row.T, dout)
+    db = np.sum(dout, axis=0, keepdims=True)
+    dx_row = np.dot(dout, w.T)
+    dx = dx_row.reshape(x.shape)
+
+#############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
     return dx, dw, db
@@ -353,11 +360,14 @@ def softmax_loss(x, y):
 
 
 
-# Testing
+# # Testing
 # from dl4cv.classifiers.fc_net import *
 # from dl4cv.data_utils import get_CIFAR10_data
 # from dl4cv.gradient_check import eval_numerical_gradient, eval_numerical_gradient_array
 # from dl4cv.solver import Solver
+# def rel_error(x, y):
+#     """ returns relative error """
+#     return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
 # # data = get_CIFAR10_data()
 # # for k, v in data.items():
 # #     print('%s: ' % k, v.shape)
@@ -382,3 +392,21 @@ def softmax_loss(x, y):
 # # Compare your output with ours. The error should be around 1e-9.
 # print('Testing affine_forward function:')
 # #print('difference: ', rel_error(out, correct_out))
+
+# x = np.random.randn(10, 2, 3)
+# w = np.random.randn(6, 5)
+# b = np.random.randn(5)
+# dout = np.random.randn(10, 5)
+#
+# dx_num = eval_numerical_gradient_array(lambda x: affine_forward(x, w, b)[0], x, dout)
+# dw_num = eval_numerical_gradient_array(lambda w: affine_forward(x, w, b)[0], w, dout)
+# db_num = eval_numerical_gradient_array(lambda b: affine_forward(x, w, b)[0], b, dout)
+#
+# _, cache = affine_forward(x, w, b)
+# dx, dw, db = affine_backward(dout, cache)
+#
+# # The error should be around 1e-10
+# print('Testing affine_backward function:')
+# print('dx error: ', rel_error(dx_num, dx))
+# print('dw error: ', rel_error(dw_num, dw))
+# print('db error: ', rel_error(db_num, db))

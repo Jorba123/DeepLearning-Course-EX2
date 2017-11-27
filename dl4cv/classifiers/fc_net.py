@@ -210,8 +210,8 @@ class FullyConnectedNet(object):
 
             if use_batchnorm:
                 print('\tLayer {0}: Batch Norm\n'.format(i+1))
-                self.params['gamma' + str(i + 1)] = np.float32(1.0)
-                self.params['beta' + str(i + 1)] = np.float32(0.0)
+                self.params['gamma' + str(i + 1)] = np.ones(hidden_dim_size)
+                self.params['beta' + str(i + 1)] = np.zeros(hidden_dim_size)
 
         # Initialize last layer
         print('\tLayer {0}: {1} - {2}'.format(self.num_layers, input_size, num_classes))

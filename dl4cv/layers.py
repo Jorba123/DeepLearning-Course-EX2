@@ -248,7 +248,55 @@ def batchnorm_backward(dout, cache):
     # TODO: Implement the backward pass for batch normalization. Store the      #
     # results in the dx, dgamma, and dbeta variables.                           #
     #############################################################################
-    pass
+
+    xout, x_norm, beta, gamma, x_minus_mean, ivar, sqrtvar, var, eps = cache
+    N, D = dout.shape
+
+    # step 1 (+ Operation) - dx => 1 * dout
+    dbeta = np.sum(dout, axis=0)
+    dgammax = dout
+
+    # step 2 (* Operation)
+    # dgamma = x * dout(dgammax)
+    # dxnorm = gamma * dout(dgammax)
+    dgamma = np.sum(dgammax * xout, axis=0)
+    dx_norm = gamma * dgammax
+
+    # step 3 (* Operation: minus_mean * ivar)
+    # divar = dx_norm * minus_mean
+    # dminus_mean = dx_norm * ivar
+    divar = np.sum(dx_norm * x_minus_mean, axis=0)
+    dminus_mean_1 = dx_norm * ivar
+
+    # step 4 (div Operation: 1 / sqrtvar)
+    # dsqrtvar = divar * ( - 1 / sqrtVar^2)
+    dsqrtvar = divar * ( - 1.0 / (sqrtvar ** 2))
+
+    # step 5 (sqrt(x+eps))
+    # dvar = dsqrtvar * 1.0 / (2 * sqrt(var + eps))
+    dvar = dsqrtvar * (1.0 / (2 * np.sqrt(var + eps)))
+
+    # step 6 (1/N sum)
+    # dsq = 1/N * dvar
+    dsq = (1.0 / N) * np.ones((N, D)) * dvar
+
+    # step 7 (** 2)
+    # dminus_mean_2 = 2 * x_minus_mean * dsq
+    dminus_mean_2 = 2 * x_minus_mean * dsq
+
+    # step 8 ( x - x_mean)
+    # dx = dminus_mean_2 + dminus_mean_1
+    # dsample_mean = - (dminus_mean_2 + dminus_mean_1)
+    dx1 = dminus_mean_2 + dminus_mean_1
+    dsample_mean = - np.sum(dminus_mean_2 + dminus_mean_1, axis=0)
+
+    # step 9 (mean)
+    # dx2 = 1/N * dsample_mean
+    dx2 = (1.0 / N) * np.ones((N, D)) * dsample_mean
+
+    # last step: combination
+    dx = dx1 + dx2
+
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################

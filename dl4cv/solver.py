@@ -1,6 +1,17 @@
 import numpy as np
-
+import time
 from dl4cv import optim
+
+
+def print_step_summary_and_update_best_values(epoch, train_loss,
+                                              train_accuracy, test_loss, test_accuracy, duration):
+    # print table header again after every 3000th step
+    if epoch % 100 == 0 and epoch > 0:
+        print('Epoch\tTrain Loss\tTrain accuracy\t\tTest Loss\tTest accuracy\tDuration')
+    train_string = '{0:.5f}\t\t{1:.2f}%\t\t\t'.format(train_loss, train_accuracy * 100)
+    test_string = '{0:.5f}\t\t{1:.2f}%\t\t'.format(test_loss, test_accuracy * 100)
+
+    print('{0}\t'.format(epoch) + train_string + test_string + '{0:.3f}'.format(duration))
 
 
 class Solver(object):
@@ -94,6 +105,7 @@ class Solver(object):
           rate is multiplied by this value.
         - batch_size: Size of minibatches used to compute loss and gradient during
           training.
+        - early_stopping: Number of epochs to wait if the model improves
         - num_epochs: The number of epochs to run for during training.
         - print_every: Integer; training losses will be printed every print_every
           iterations.
@@ -112,6 +124,7 @@ class Solver(object):
         self.lr_decay = kwargs.pop('lr_decay', 1.0)
         self.batch_size = kwargs.pop('batch_size', 100)
         self.num_epochs = kwargs.pop('num_epochs', 10)
+        self.early_stopping = kwargs.pop('early_stopping', -1)
 
         self.print_every = kwargs.pop('print_every', 10)
         self.verbose = kwargs.pop('verbose', True)
@@ -138,7 +151,9 @@ class Solver(object):
         self.epoch = 0
         self.best_val_acc = 0
         self.best_params = {}
+        self.early_stopping_counter = self.early_stopping
         self.loss_history = []
+        self.val_loss_history = []
         self.train_acc_history = []
         self.val_acc_history = []
 
@@ -219,13 +234,13 @@ class Solver(object):
         iterations_per_epoch = max(num_train // self.batch_size, 1)
         num_iterations = self.num_epochs * iterations_per_epoch
 
+        if self.verbose:
+            print('Epoch\tTrain Loss\tTrain accuracy\t\tTest Loss\tTest accuracy\tDuration')
+            print('=====================================================================================================')
+            start_time = time.time()
+
         for t in range(num_iterations):
             self._step()
-
-            # Maybe print training loss
-            if self.verbose and t % self.print_every == 0:
-                print('(Iteration %d / %d) loss: %f' % (
-                    t + 1, num_iterations, self.loss_history[-1]))
 
             # At the end of every epoch, increment the epoch counter and decay the
             # learning rate.
@@ -247,15 +262,45 @@ class Solver(object):
                 self.val_acc_history.append(val_acc)
 
                 if self.verbose:
-                    print('(Epoch %d / %d) train acc: %f; val_acc: %f' % (
-                        self.epoch, self.num_epochs, train_acc, val_acc))
+                    duration = time.time() - start_time
+                    start_time = time.time()
 
-                # Keep track of the best model
+                    # get valid loss
+                    val_loss = self.model.loss(self.X_val, self.y_val)[0]
+                    self.val_loss_history.append(val_loss)
+
+                    # don't take the average in the first iteration
+                    if epoch_end:
+                        # include all losses from the current epoch
+                        start_epoch = t - iterations_per_epoch
+                        average_train_loss = sum(self.loss_history[start_epoch:]) // iterations_per_epoch
+
+                        print_step_summary_and_update_best_values(self.epoch, average_train_loss, train_acc,
+                                                                  val_loss, val_acc, duration)
+
+                # early stopping if no improvement of val_acc during the last self.early_stopping epochs
+                # https://link.springer.com/chapter/10.1007/978-3-642-35289-8_5
                 if val_acc > self.best_val_acc:
                     self.best_val_acc = val_acc
+
+                    # copy best model
                     self.best_params = {}
                     for k, v in self.model.params.items():
                         self.best_params[k] = v.copy()
+                    self.early_stopping_counter = self.early_stopping
+
+                else:
+                    self.early_stopping_counter -= 1
+
+                    # if early_stopping_counter is 0 restore best weights and stop training
+                    if self.early_stopping > -1 and self.early_stopping_counter <= 0:
+                        print('> Early Stopping after {0} epochs of no improvements.'.format(self.early_stopping))
+                        print('> Restoring params of best model with validation accuracy of: '
+                              , self.best_val_acc)
+                        self.model.params = self.best_params
+                        break
+
+        print('=====================================================================================================')
 
         # At the end of training swap the best params into the model
         self.model.params = self.best_params

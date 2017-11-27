@@ -335,7 +335,15 @@ def dropout_forward(x, dropout_param):
         # TODO: Implement the training phase forward pass for inverted dropout.   #
         # Store the dropout mask in the mask variable.                            #
         ###########################################################################
-        pass
+
+        # randomly scale (some) activations by (some) amount
+        # (usually the reciprocal of the dropout parameter).
+
+        # creates a mask with [True, False, ...] depending on the value of p. Then divide that by reciprocal of p
+        # so that we have (random) activation scaling [0, 0, 2] (in case of p = 0.5 (because True => 1.0)
+        mask = (np.random.rand(*x.shape) >= p) / (1 - p)
+        out = x * mask
+
         ###########################################################################
         #                            END OF YOUR CODE                             #
         ###########################################################################
@@ -343,7 +351,10 @@ def dropout_forward(x, dropout_param):
         ###########################################################################
         # TODO: Implement the test phase forward pass for inverted dropout.       #
         ###########################################################################
-        pass
+
+        # nothing to do here
+        out = x
+
         ###########################################################################
         #                            END OF YOUR CODE                             #
         ###########################################################################

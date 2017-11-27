@@ -195,12 +195,9 @@ class FullyConnectedNet(object):
         ############################################################################
 
         input_size = input_dim
-        print('Num Layers: ', self.num_layers)
 
         for i in range(self.num_layers - 1):
             hidden_dim_size = hidden_dims[i]
-
-            print('\tLayer {0}: {1} - {2}'.format(i+1, input_size, hidden_dim_size))
 
             self.params['W' + str(i + 1)] = np.random.normal(scale=weight_scale, size=(input_size, hidden_dim_size))
             self.params['b' + str(i + 1)] = np.zeros(hidden_dim_size)
@@ -209,16 +206,12 @@ class FullyConnectedNet(object):
             input_size = hidden_dim_size
 
             if use_batchnorm:
-                print('\tLayer {0}: Batch Norm\n'.format(i+1))
                 self.params['gamma' + str(i + 1)] = np.ones(hidden_dim_size)
                 self.params['beta' + str(i + 1)] = np.zeros(hidden_dim_size)
 
         # Initialize last layer
-        print('\tLayer {0}: {1} - {2}'.format(self.num_layers, input_size, num_classes))
         self.params['W' + str(self.num_layers)] = np.random.normal(scale=weight_scale, size=(input_size, num_classes))
         self.params['b' + str(self.num_layers)] = np.zeros(num_classes)
-
-        print('\n\n----------------------------')
 
 
         ############################################################################

@@ -210,8 +210,8 @@ class FullyConnectedNet(object):
 
             if use_batchnorm:
                 print('\tLayer {0}: Batch Norm\n'.format(i+1))
-                self.params['gamma' + str(i + 1)] = 1.0
-                self.params['beta' + str(i + 1)] = 0.0
+                self.params['gamma' + str(i + 1)] = np.float32(1.0)
+                self.params['beta' + str(i + 1)] = np.float32(0.0)
 
         # Initialize last layer
         print('\tLayer {0}: {1} - {2}'.format(self.num_layers, input_size, num_classes))
@@ -293,7 +293,7 @@ class FullyConnectedNet(object):
 
             # do batch normalization
             if self.use_batchnorm:
-                gamma, beta = self.params['gamme' + str(i + 1)], self.params['beta' + str(i + 1)]
+                gamma, beta = self.params['gamma' + str(i + 1)], self.params['beta' + str(i + 1)]
                 l_out, cache['batchNorm'] = batchnorm_forward(l_out, gamma, beta, self.bn_params[i])
 
             # relu layer

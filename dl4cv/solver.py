@@ -273,7 +273,7 @@ class Solver(object):
                     if epoch_end:
                         # include all losses from the current epoch
                         start_epoch = t - iterations_per_epoch
-                        average_train_loss = sum(self.loss_history[start_epoch:]) // iterations_per_epoch
+                        average_train_loss = sum(self.loss_history[start_epoch:]) / iterations_per_epoch
 
                         print_step_summary_and_update_best_values(self.epoch, average_train_loss, train_acc,
                                                                   val_loss, val_acc, duration)
